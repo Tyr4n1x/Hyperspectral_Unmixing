@@ -24,7 +24,7 @@ rgb = colorize(hcube,'Method','RGB');
 [falsecolor,idx] = colorize(hcube,'Method','falsecolor');
 
 figure('WindowState','maximized');
-t = tiledlayout(1,2,'TileSpacing','Compact');
+tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
 ax1 = nexttile;
 imagesc(falsecolor)
 axis off
@@ -33,11 +33,12 @@ ax2 = nexttile;
 imagesc(rgb)
 axis off
 title('RGB','FontSize',16)
+
+saveas(gcf,'./Images/RGB-False_Color.png')
 %% Extract endmembers
 
     %% Average knowing Ground Truth
 
-% need to normalize indian_pines ?
 m = size(data,1);
 n = size(data,2);
 L = size(data,3); % number of bands
@@ -67,6 +68,7 @@ for PFA = 10.^(-10:1:-1)
 end
 xlabel('PFA')
 xticks(10.^(-10:1:-1))
+xlim([10^-11 10^0])
 title('Number of endmembers','FontSize',14)
 saveas(gcf,'./Images/Convergence_Endmembers.png')
 
@@ -76,34 +78,35 @@ endmembers = ppi(hcube.DataCube,numEndmembers,'NumVectors',10^5,'ReductionMethod
 endmembers2 = nfindr(hcube.DataCube,numEndmembers,'NumIterations',3*numEndmembers,'ReductionMethod','MNF');
 endmembers3 = fippi(hcube.DataCube,numEndmembers,'ReductionMethod','MNF');
 
-% figure('WindowState','maximized');
-% 
-% subplot(2,2,1)
-% plot(wavelengths, M)
-% xlabel('Wavelength')
-% xlim([min(wavelengths)-50, max(wavelengths)+50])
-% title('Average knowing Ground Truth')
-% 
-% subplot(2,2,2)
-% plot(wavelengths, endmembers)
-% xlabel('Wavelength')
-% xlim([min(wavelengths)-50, max(wavelengths)+50])
-% title('PPI')
-% 
-% subplot(2,2,3)
-% plot(wavelengths, endmembers2)
-% xlabel('Wavelength')
-% xlim([min(wavelengths)-50, max(wavelengths)+50])
-% title('N-FINDR')
-% 
-% subplot(2,2,4)
-% plot(wavelengths, endmembers3)
-% xlabel('Wavelength')
-% xlim([min(wavelengths)-50, max(wavelengths)+50])
-% title('FIPPI')
-% 
-% sgtitle(['Number of Endmembers: ' num2str(p)])
-% saveas(gcf,'./Images/Determination_Endmembers.png')
+figure('WindowState','maximized');
+t = tiledlayout(2,2,'TileSpacing','Compact','Padding','Compact');
+
+nexttile;
+plot(wavelengths, M)
+xlim([min(wavelengths)-50, max(wavelengths)+50])
+xlabel('Wavelength')
+title('Average knowing Ground Truth','FontSize',14)
+
+nexttile;
+plot(wavelengths, endmembers)
+xlim([min(wavelengths)-50, max(wavelengths)+50])
+xlabel('Wavelength')
+title('PPI','FontSize',14)
+
+nexttile;
+plot(wavelengths, endmembers2)
+xlim([min(wavelengths)-50, max(wavelengths)+50])
+xlabel('Wavelength')
+title('N-FINDR','FontSize',14)
+
+nexttile;
+plot(wavelengths, endmembers3)
+xlim([min(wavelengths)-50, max(wavelengths)+50])
+xlabel('Wavelength')
+title('FIPPI','FontSize',14)
+
+linkaxes(t.Children,'xy')
+saveas(gcf,'./Images/Determination_Endmembers.png')
 
 %% Calculate covariance matrix
 
@@ -118,8 +121,6 @@ end
 R = R./K;
 
 %% Calculate the abundance for every endmember
-
-% abundanceMap = estimateAbundanceLS(hcube_c,endmembers);
 
     %% Pseudo-inverse (assume M is known)
     
@@ -142,6 +143,9 @@ c = colorbar('FontSize',14);
 ylabel(c,'\alpha', 'FontSize',20, 'Rotation',0); c.Label.Position(1) = c.Position(2)+c.Position(4)*5;
 title('Abundance Map','FontSize',14)
 saveas(gcf,'./Images/Pseudo_Inverse/AbundanceMap.png')
+
+fprintf("Determinant of M'*M = ")
+disp( det(M'*M) )
 
 % not good, endmembers not spectrally independent (<-> assumption pseudo-inverse) + rounding !
 
@@ -190,6 +194,13 @@ c = colorbar('FontSize',14);
 ylabel(c,'\alpha', 'FontSize',20, 'Rotation',0); c.Label.Position(1) = c.Position(2)+c.Position(4)*5;
 title('Abundance Map','FontSize',14)
 saveas(gcf,'./Images/UnknownU/AbundanceMap.png')
+
+    %% Matlab method
+    
+abundanceMap = estimateAbundanceLS(hcube,M,'Method','FCLS');
+figure()
+montage(abundanceMap,'Size',[4 4],'BorderSize',[10 10]);
+colormap default
 
 %%
 
