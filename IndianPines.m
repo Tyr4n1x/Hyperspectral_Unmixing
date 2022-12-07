@@ -5,8 +5,8 @@ addpath(genpath('./Data'))
 addpath(genpath('./Images'))
 addpath(genpath('./Functions'))
 
-load('Indian_pines.mat');
-load('Indian_pines_corrected.mat');
+load('IndianPines.mat'); % default from Hyperspectral Toolbox
+load('IndianPines_corrected.mat');
 load('Indian_pines_gt.mat');
 
 data = indian_pines_corrected;
@@ -16,10 +16,10 @@ data = indian_pines_corrected;
 wavelengths = linspace(0.4,2.5,size(indian_pines,3))*10^3; % [nm]
 if data == indian_pines_corrected
     wavelengths([104:108,150:163,220]) = []; % [nm]
+    endmembers([104:108,150:163,220],:) = [];
 end
 
 hcube = hypercube(data, wavelengths);
-% hcube = hypercube( denoiseNGMeet(hcube.DataCube), hcube.Wavelength);
 rgb = colorize(hcube,'Method','RGB');
 [falsecolor,idx] = colorize(hcube,'Method','falsecolor');
 
@@ -28,13 +28,14 @@ tiledlayout(1,2,'TileSpacing','Compact','Padding','Compact');
 ax1 = nexttile;
 imagesc(falsecolor)
 axis off
-title('False Color','FontSize',16)
+title('False Color','FontSize',20)
 ax2 = nexttile;
 imagesc(rgb)
 axis off
-title('RGB','FontSize',16)
+title('RGB','FontSize',20)
 
-saveas(gcf,'./Images/RGB-False_Color.png')
+exportgraphics(gcf,'./Images/RGB-False_Color.png')
+
 %% Extract endmembers
 
     %% Average knowing Ground Truth
@@ -63,50 +64,68 @@ M = M./freq; % to take average
 figure(); set(gca,'XScale','log','XDir','reverse'); hold on
 ylim([15 34])
 for PFA = 10.^(-10:1:-1)
-    numEndmembers = countEndmembersHFC(hcube,'PFA',PFA);
+    numEndmembers = countEndmembersHFC(hcube,'PFA',PFA,'NoiseWhiten',true);
     plot(PFA,numEndmembers,'r*')
 end
 xlabel('PFA')
 xticks(10.^(-10:1:-1))
 xlim([10^-11 10^0])
-title('Number of endmembers','FontSize',14)
-saveas(gcf,'./Images/Convergence_Endmembers.png')
+title('Number of endmembers','FontSize',16)
+exportgraphics(gcf,'./Images/Convergence_Endmembers.png')
 
 numEndmembers = countEndmembersHFC(hcube,'PFA',10^-5);
-%%
-endmembers = ppi(hcube.DataCube,numEndmembers,'NumVectors',10^5,'ReductionMethod','MNF');
+
+    %% Comparison of the different methods to the reference
+    
+endmembers1 = ppi(hcube.DataCube,numEndmembers,'NumVectors',10^4,'ReductionMethod','MNF');
 endmembers2 = nfindr(hcube.DataCube,numEndmembers,'NumIterations',3*numEndmembers,'ReductionMethod','MNF');
 endmembers3 = fippi(hcube.DataCube,numEndmembers,'ReductionMethod','MNF');
 
 figure('WindowState','maximized');
 t = tiledlayout(2,2,'TileSpacing','Compact','Padding','Compact');
 
-nexttile;
-plot(wavelengths, M)
-xlim([min(wavelengths)-50, max(wavelengths)+50])
-xlabel('Wavelength')
-title('Average knowing Ground Truth','FontSize',14)
+nexttile; bar( diag( corr(endmembers,M) ));
+ylim([0.8 1])
+title('Average knowing ground truth','FontSize',20)
 
-nexttile;
-plot(wavelengths, endmembers)
-xlim([min(wavelengths)-50, max(wavelengths)+50])
-xlabel('Wavelength')
-title('PPI','FontSize',14)
+nexttile; bar( diag( corr(endmembers,endmembers1) ));
+ylim([0.8 1])
+title('PPI','FontSize',20)
 
-nexttile;
-plot(wavelengths, endmembers2)
-xlim([min(wavelengths)-50, max(wavelengths)+50])
-xlabel('Wavelength')
-title('N-FINDR','FontSize',14)
+nexttile; bar( diag( corr(endmembers,endmembers2) ));
+ylim([0.8 1])
+title('N-FINDR','FontSize',20)
 
-nexttile;
-plot(wavelengths, endmembers3)
-xlim([min(wavelengths)-50, max(wavelengths)+50])
-xlabel('Wavelength')
-title('FIPPI','FontSize',14)
+nexttile; bar( diag( corr(endmembers,endmembers3) ));
+ylim([0.8 1])
+title('FPPI','FontSize',20)
 
 linkaxes(t.Children,'xy')
-saveas(gcf,'./Images/Determination_Endmembers.png')
+title(t,'Correlation of the endmembers with respect to the reference','Fontsize',16)
+
+exportgraphics(gcf,'./Images/Correlation_Endmembers.png')
+
+    %%
+
+figure('WindowState','maximized');
+t = tiledlayout(4,4,'TileSpacing','Compact','Padding','Compact');
+
+for tile = 1:numEndmembers
+    nexttile; hold on
+    plot(wavelengths, endmembers(:,tile),'LineWidth',2.5)
+    plot(wavelengths, M(:,tile))
+    plot(wavelengths, endmembers1(:,tile))
+    plot(wavelengths, endmembers2(:,tile))
+    plot(wavelengths, endmembers3(:,tile))
+    xlim([min(wavelengths)-50, max(wavelengths)+50])
+    xlabel('Wavelength')
+    title(sprintf('Endmember = %d',tile),'FontSize',14)
+end
+l = legend('Reference','Ground Truth','PPI','N-FINDR','FPPI','Fontsize',16);
+l.Layout.Tile = 'East';
+linkaxes(t.Children,'xy')
+
+exportgraphics(gcf,'./Images/Determination_Endmembers.png')
 
 %% Calculate covariance matrix
 
@@ -129,12 +148,12 @@ R = R./K;
 C = confusionmat( reshape(indian_pines_gt,1,[]) , reshape(classification,1,[]) );
 
 figure('WindowState','maximized');
-confusionchart(C,0:16,'RowSummary','row-normalized','Title','Confusion Chart','FontSize',14);
-saveas(gcf,'./Images/Pseudo_Inverse/ConfusionChart.png')
+confusionchart(C,0:16,'RowSummary','row-normalized','Title','Confusion Chart','FontSize',20);
+exportgraphics(gcf,'./Images/Pseudo_Inverse/ConfusionChart.png')
 
 plot_classes(classification);
-title('Classification','FontSize',14)
-saveas(gcf,'./Images/Pseudo_Inverse/Classification.png')
+title('Classification','FontSize',20)
+exportgraphics(gcf,'./Images/Pseudo_Inverse/Classification.png')
 
 figure();
 montage(alphas,'Size',[4 4],'BorderSize',[20 20])
@@ -142,7 +161,7 @@ colormap default
 c = colorbar('FontSize',14);
 ylabel(c,'\alpha', 'FontSize',20, 'Rotation',0); c.Label.Position(1) = c.Position(2)+c.Position(4)*5;
 title('Abundance Map','FontSize',14)
-saveas(gcf,'./Images/Pseudo_Inverse/AbundanceMap.png')
+exportgraphics(gcf,'./Images/Pseudo_Inverse/AbundanceMap.png')
 
 fprintf("Determinant of M'*M = ")
 disp( det(M'*M) )
@@ -156,12 +175,12 @@ disp( det(M'*M) )
 C = confusionmat( reshape(indian_pines_gt,1,[]) , reshape(classification,1,[]) );
 
 figure('WindowState','maximized');
-confusionchart(C,0:16,'RowSummary','row-normalized','Title','Confusion Chart','FontSize',14);
-saveas(gcf,'./Images/Optimum_Detection/ConfusionChart.png')
+confusionchart(C,0:16,'RowSummary','row-normalized','Title','Confusion Chart','FontSize',20);
+exportgraphics(gcf,'./Images/Optimum_Detection/ConfusionChart.png')
 
 plot_classes(classification);
-title('Classification','FontSize',14)
-saveas(gcf,'./Images/Optimum_Detection/Classification.png')
+title('Classification','FontSize',20)
+exportgraphics(gcf,'./Images/Optimum_Detection/Classification.png')
 
 figure();
 montage(alphas,'Size',[4 4],'BorderSize',[20 20])
@@ -169,7 +188,7 @@ colormap default
 c = colorbar('FontSize',14);
 ylabel(c,'\alpha', 'FontSize',20, 'Rotation',0); c.Label.Position(1) = c.Position(2)+c.Position(4)*5;
 title('Abundance Map','FontSize',14)
-saveas(gcf,'./Images/Optimum_Detection/AbundanceMap.png')
+exportgraphics(gcf,'./Images/Optimum_Detection/AbundanceMap.png')
 
 % should be same as previous method
 
@@ -179,38 +198,18 @@ saveas(gcf,'./Images/Optimum_Detection/AbundanceMap.png')
 
 C = confusionmat( reshape(indian_pines_gt,1,[]) , reshape(classification,1,[]) );
 
-figure('WindowState','maximized');
-confusionchart(C,0:16,'RowSummary','row-normalized','Title','Confusion Chart','FontSize',14);
-saveas(gcf,'./Images/UnknownU/ConfusionChart.png')
+figure('WindowState','maximized'); tiledlayout(1,1,'TileSpacing','Compact','Padding','Compact');
+nexttile; confusionchart(C,0:16,'RowSummary','row-normalized','Title','Confusion Chart','FontSize',20);
+exportgraphics(gcf,'./Images/UnknownU/ConfusionChart.png')
 
 plot_classes(classification);
-title('Classification','FontSize',14)
-saveas(gcf,'./Images/UnknownU/Classification.png')
+title('Classification','FontSize',20)
+exportgraphics(gcf,'./Images/UnknownU/Classification.png')
 
-figure();
+figure(); tiledlayout(1,1,'TileSpacing','Compact','Padding','Compact');
 montage(alphas,'Size',[4 4],'BorderSize',[20 20])
 colormap default
 c = colorbar('FontSize',14);
 ylabel(c,'\alpha', 'FontSize',20, 'Rotation',0); c.Label.Position(1) = c.Position(2)+c.Position(4)*5;
 title('Abundance Map','FontSize',14)
-saveas(gcf,'./Images/UnknownU/AbundanceMap.png')
-
-    %% Matlab method
-    
-abundanceMap = estimateAbundanceLS(hcube,M,'Method','FCLS');
-figure()
-montage(abundanceMap,'Size',[4 4],'BorderSize',[10 10]);
-colormap default
-
-%%
-
-counter = 0;
-for i = 1:m
-    for j = 1:n
-        r = squeeze( alphas(i,j,:) ); % measurement at one pixel
-        if sum(r==1) > 1
-            counter = counter + 1;
-            fprintf('%d: %d,%d \n',counter,i,j)
-        end
-    end
-end
+exportgraphics(gcf,'./Images/UnknownU/AbundanceMap.png')

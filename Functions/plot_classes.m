@@ -27,7 +27,7 @@ function plot_classes(data)
     else
         my_colors = distinguishable_colors(n_colors,'white');
     end
-
+    
     figure('WindowState','maximized');
     colormap(my_colors)
     imagesc(data)
@@ -56,5 +56,6 @@ function plot_classes(data)
     else
         set(c,'Ticks',c.Limits(1)+d:2*d:c.Limits(2)+d)
     end
+    
 end
 
