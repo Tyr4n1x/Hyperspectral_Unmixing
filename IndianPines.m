@@ -81,29 +81,40 @@ endmembers1 = ppi(hcube.DataCube,numEndmembers,'NumVectors',10^4,'ReductionMetho
 endmembers2 = nfindr(hcube.DataCube,numEndmembers,'NumIterations',3*numEndmembers,'ReductionMethod','MNF');
 endmembers3 = fippi(hcube.DataCube,numEndmembers,'ReductionMethod','MNF');
 
-figure('WindowState','maximized');
-t = tiledlayout(2,2,'TileSpacing','Compact','Padding','Compact');
-
-nexttile; bar( diag( corr(endmembers,M) ));
-ylim([0.8 1])
-title('Average knowing ground truth','FontSize',20)
-
-nexttile; bar( diag( corr(endmembers,endmembers1) ));
-ylim([0.8 1])
-title('PPI','FontSize',20)
-
-nexttile; bar( diag( corr(endmembers,endmembers2) ));
-ylim([0.8 1])
-title('N-FINDR','FontSize',20)
-
-nexttile; bar( diag( corr(endmembers,endmembers3) ));
-ylim([0.8 1])
-title('FPPI','FontSize',20)
-
-linkaxes(t.Children,'xy')
-title(t,'Correlation of the endmembers with respect to the reference','Fontsize',16)
+figure(); imagesc( corr(endmembers) );
+ax = gca; ax.YDir = 'normal'; ax.FontSize = 12;
+colorbar;
+title('Autocorrelation of reference','FontSize',16)
 
 exportgraphics(gcf,'./Images/Correlation_Endmembers.png')
+
+figure(); imagesc( corr(endmembers,M) );
+ax = gca; ax.YDir = 'normal'; ax.FontSize = 12;
+colorbar;
+title('Average knowing ground truth','FontSize',16)
+
+exportgraphics(gcf,'./Images/Correlation_Endmembers1.png')
+
+figure(); imagesc( corr(endmembers,endmembers1) );
+ax = gca; ax.YDir = 'normal'; ax.FontSize = 12;
+colorbar;
+title('PPI','FontSize',16)
+
+exportgraphics(gcf,'./Images/Correlation_Endmembers2.png')
+
+figure(); imagesc( corr(endmembers,endmembers2) );
+ax = gca; ax.YDir = 'normal'; ax.FontSize = 12;
+colorbar;
+title('N-FINDR','FontSize',16)
+
+exportgraphics(gcf,'./Images/Correlation_Endmembers3.png')
+
+figure(); imagesc( corr(endmembers,endmembers3) );
+ax = gca; ax.YDir = 'normal'; ax.FontSize = 12;
+colorbar;
+title('FPPI','FontSize',16)
+
+exportgraphics(gcf,'./Images/Correlation_Endmembers4.png')
 
     %%
 
