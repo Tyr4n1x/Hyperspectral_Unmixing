@@ -36,6 +36,9 @@ title('RGB','FontSize',20)
 
 exportgraphics(gcf,'./Images/RGB-False_Color.png')
 
+fprintf('The following wavelengths were considered for the false coloring: \n %0.2f nm \t %0.2f nm \t %0.2f nm \n', ...
+        sort(wavelengths(idx)) )
+
 %% Extract endmembers
 
     %% Average knowing Ground Truth
